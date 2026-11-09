@@ -7,16 +7,15 @@ import pytesseract
 from pdf2image import convert_from_bytes
 from PIL import Image
 import platform
+from datetime import datetime
 
 # --- CROSS-PLATFORM TESSERACT CONFIGURATION ---
-# Conditionally sets path ONLY when testing locally on Windows.
-# On Streamlit Cloud (Linux), it skips this and uses the system installation from packages.txt.
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Bridge Course Online Assessment Engine",
+    page_title="Bridge Course Assessment & Grading Engine",
     page_icon="📝",
     layout="centered"
 )
@@ -24,8 +23,9 @@ st.set_page_config(
 # --- ABSOLUTE PATH SETUP ---
 BASE_DIR = Path(__file__).resolve().parent
 JSON_FILE_PATH = BASE_DIR / "question.json"
+SUBMISSIONS_FILE_PATH = BASE_DIR / "submissions.json"
 
-# Hybrid starter questions demonstration (supporting MCQ, short, and long types)
+# Hybrid starter questions demonstration
 DEFAULT_QUESTIONS = [
     {
         "id": 1,
@@ -60,7 +60,43 @@ def load_questions():
     except json.JSONDecodeError:
         return []
 
-tab_quiz, tab_creator = st.tabs(["📝 Take Assessment", "✍️ Teacher Question Creator"])
+def load_submissions():
+    if not SUBMISSIONS_FILE_PATH.exists() or SUBMISSIONS_FILE_PATH.stat().st_size == 0:
+        with open(SUBMISSIONS_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump([], f, indent=4, ensure_ascii=False)
+    try:
+        with open(SUBMISSIONS_FILE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        return []
+
+def save_submission(student_name, user_responses, mcq_score, total_mcq):
+    submissions = load_submissions()
+    sub_id = f"SUB-{len(submissions) + 1:03d}"
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    new_sub = {
+        "submission_id": sub_id,
+        "student_name": student_name if student_name.strip() else "Anonymous Student",
+        "timestamp": timestamp,
+        "mcq_score": mcq_score,
+        "total_mcq": total_mcq,
+        "responses": user_responses,
+        "manual_marks": {},
+        "teacher_remarks": {},
+        "evaluated": False
+    }
+    
+    submissions.append(new_sub)
+    with open(SUBMISSIONS_FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(submissions, f, indent=4, ensure_ascii=False)
+    return sub_id
+
+tab_quiz, tab_creator, tab_eval = st.tabs([
+    "📝 Take Assessment", 
+    "✍️ Teacher Question Creator", 
+    "👨‍🏫 Teacher Evaluation Dashboard"
+])
 
 # =====================================================================
 # TAB 1: TAKE ASSESSMENT
@@ -81,16 +117,19 @@ with tab_quiz:
             st.session_state["user_answers"] = {}
         if "score" not in st.session_state:
             st.session_state["score"] = 0
+        if "last_sub_id" not in st.session_state:
+            st.session_state["last_sub_id"] = None
 
         if not st.session_state["submitted"]:
+            student_name = st.text_input("Enter Student Name / Roll Number", placeholder="e.g. Rahul Sharma (Roll: 102)", key="student_id_input")
+            st.markdown("<br>", unsafe_allow_html=True)
+            
             with st.form("bridge_quiz_form"):
                 user_responses = {}
                 for idx, q in enumerate(questions, start=1):
-                    q_type = q.get("type", "mcq") # Default to mcq for backwards compatibility
-                    
+                    q_type = q.get("type", "mcq")
                     st.markdown(f"#### **Q{idx}. {q['question']}**")
                     
-                    # Render dynamic UI depending on Question Type
                     if q_type == "mcq":
                         user_responses[q["id"]] = st.radio(
                             label=f"Choose answer for Q{idx}",
@@ -113,7 +152,6 @@ with tab_quiz:
                             key=f"q_{q['id']}",
                             label_visibility="collapsed"
                         )
-                    
                     st.markdown("<br>", unsafe_allow_html=True)
                     
                 submit_btn = st.form_submit_button("🚀 Submit Assessment", use_container_width=True)
@@ -126,14 +164,16 @@ with tab_quiz:
                     if unanswered:
                         st.warning(f"Please attempt all questions before submitting! ({len(unanswered)} remaining)")
                     else:
-                        # Auto-score MCQs; subjective questions can be reviewed post-submission
                         mcq_questions = [q for q in questions if q.get("type", "mcq") == "mcq"]
                         mcq_correct = sum(
                             1 for q in mcq_questions if user_responses[q["id"]] == q.get("answer")
                         )
                         
+                        sub_id = save_submission(student_name, user_responses, mcq_correct, len(mcq_questions))
+                        
                         st.session_state["user_answers"] = user_responses
                         st.session_state["score"] = mcq_correct
+                        st.session_state["last_sub_id"] = sub_id
                         st.session_state["submitted"] = True
                         st.rerun()
         else:
@@ -142,45 +182,45 @@ with tab_quiz:
             score = st.session_state["score"]
             percentage = int((score / total_mcq) * 100) if total_mcq > 0 else 0
             
-            st.markdown("## 📊 Assessment Result Summary")
+            st.success(f"🎉 Assessment Submitted Successfully! Reference ID: **{st.session_state['last_sub_id']}**")
+            st.markdown("## 📊 Submission Summary")
             
             if total_mcq > 0:
                 c1, c2, c3 = st.columns(3)
                 with c1: st.metric("MCQ Score", f"{score} / {total_mcq}")
                 with c2: st.metric("MCQ Percentage", f"{percentage}%")
-                with c3: st.metric("Status", "PASSED ✅" if percentage >= 50 else "NEEDS REVIEW ⚠️")
-            else:
-                st.info("This test consists entirely of subjective/descriptive questions.")
-                
+                with c3: st.metric("MCQ Status", "PASSED ✅" if percentage >= 50 else "NEEDS REVIEW ⚠️")
+            
+            st.info("ℹ️ Your subjective/descriptive responses have been logged for faculty evaluation.")
             st.markdown("---")
-            st.markdown("### 🔍 Detailed Submission & Solution Review")
+            st.markdown("### 🔍 Submission Copy & Answer Key")
             
             user_ans = st.session_state["user_answers"]
-            
             for idx, q in enumerate(questions, start=1):
                 selected = user_ans.get(q["id"], "")
                 model_ans = q.get("answer", "")
                 q_type = q.get("type", "mcq")
                 
                 st.markdown(f"**Q{idx}. {q['question']}**")
-                st.caption(f"Question Type: **{q_type.upper()}**")
+                st.caption(f"Type: **{q_type.upper()}**")
                 
                 if q_type == "mcq":
                     is_correct = selected == model_ans
                     if is_correct:
                         st.success(f"Your Answer: **{selected}** (Correct ✅)")
                     else:
-                        st.error(f"Your Answer: **{selected}** (Incorrect ❌)\n\nCorrect Answer: **{model_ans}**")
+                        st.error(f"Your Answer: **{selected}** (Incorrect ❌) | Correct: **{model_ans}**")
                 else:
                     st.info(f"**Your Submitted Response:**\n\n>{selected}")
                     with st.expander("📖 View Model Answer / Grading Key"):
                         st.write(model_ans)
                 st.markdown("---")
 
-            if st.button("🔄 Retake Test", use_container_width=True):
+            if st.button("🔄 Take Another Assessment", use_container_width=True):
                 st.session_state["submitted"] = False
                 st.session_state["user_answers"] = {}
                 st.session_state["score"] = 0
+                st.session_state["last_sub_id"] = None
                 st.rerun()
 
 # =====================================================================
@@ -190,14 +230,11 @@ with tab_creator:
     st.markdown("### ✍️ Teacher Question Creator & Flexible Importer")
     st.markdown("---")
 
-    # Persistent success message display across reruns
     if "form_success" in st.session_state:
         st.success(st.session_state["form_success"])
         del st.session_state["form_success"]
 
-    # --- Section A: Flexible Question Creator Form (Reactive Non-Form Layout) ---
     st.markdown("#### ➕ Add New Question")
-    
     q_type_choice = st.selectbox(
         "Select Question Type", 
         ["Multiple Choice (MCQ)", "Short Answer Type", "Long Answer / Descriptive Type"],
@@ -230,7 +267,7 @@ with tab_creator:
         q_type_code = "short"
         correct_ans = st.text_input("Model Answer / Key Words", placeholder="e.g., Energy / Force / Standard definition", key="short_ans_input")
         
-    else: # Long Answer Type
+    else:
         q_type_code = "long"
         correct_ans = st.text_area("Model Solution / Evaluation Guidelines", placeholder="Provide step-by-step solution or grading criteria...", key="long_ans_input")
 
@@ -263,8 +300,6 @@ with tab_creator:
             st.rerun()
 
     st.markdown("---")
-    
-    # --- Section B: Smart PDF / Image Importer ---
     st.markdown("#### 📄 Smart PDF / Scanned Image Importer")
     st.caption("Upload question papers (`.pdf`, `.png`, `.jpg`). The system automatically detects whether questions are MCQs or subjective tasks.")
     
@@ -335,7 +370,6 @@ with tab_creator:
                 except Exception as e:
                     st.error(f"Import Error: {e}")
 
-    # --- Section C: Question Bank Management ---
     st.markdown("---")
     st.markdown("#### ⚙️ Question Bank Management")
     st.caption("Clear existing records to start a fresh question bank.")
@@ -345,3 +379,98 @@ with tab_creator:
             json.dump([], f, indent=4, ensure_ascii=False)
         st.session_state["form_success"] = "Question bank has been completely cleared and reset!"
         st.rerun()
+
+# =====================================================================
+# TAB 3: TEACHER EVALUATION & GRADING DASHBOARD
+# =====================================================================
+with tab_eval:
+    st.markdown("### 👨‍🏫 Subjective Answer Evaluation & Grading Dashboard")
+    st.caption("Review student submissions, assign manual marks for short/long answers, and record faculty feedback.")
+    st.markdown("---")
+
+    submissions = load_submissions()
+    questions = load_questions()
+    q_dict = {q["id"]: q for q in questions}
+
+    if not submissions:
+        st.info("No student submissions logged yet.")
+    else:
+        # Build submission selector options
+        sub_options = {
+            f"{s['submission_id']} — {s['student_name']} ({s['timestamp']}) [{'EVALUATED ✅' if s.get('evaluated') else 'PENDING ⏳'}]": idx
+            for idx, s in enumerate(submissions)
+        }
+        
+        selected_label = st.selectbox("Select Student Submission to Review", options=list(sub_options.keys()))
+        selected_idx = sub_options[selected_label]
+        sub = submissions[selected_idx]
+        
+        st.markdown(f"### Student: **{sub['student_name']}** (`{sub['submission_id']}`)")
+        st.caption(f"Submitted on: {sub['timestamp']}")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("Auto-Scored MCQ Result", f"{sub['mcq_score']} / {sub['total_mcq']}")
+        with c2:
+            status_label = "Evaluated ✅" if sub.get("evaluated") else "Pending Evaluation ⏳"
+            st.metric("Evaluation Status", status_label)
+            
+        st.markdown("---")
+        
+        manual_marks = sub.get("manual_marks", {})
+        teacher_remarks = sub.get("teacher_remarks", {})
+        
+        with st.form("evaluation_grading_form"):
+            st.markdown("#### 📝 Evaluate Subjective & Short Answers")
+            
+            for q_id_str, student_ans in sub["responses"].items():
+                q_id = int(q_id_str) if str(q_id_str).isdigit() else q_id_str
+                q_info = q_dict.get(q_id, {"question": f"Question #{q_id}", "type": "unknown", "answer": "N/A"})
+                q_type = q_info.get("type", "mcq")
+                
+                st.markdown(f"**Q. {q_info['question']}**")
+                st.caption(f"Question Type: **{q_type.upper()}**")
+                
+                if q_type == "mcq":
+                    is_correct = student_ans == q_info.get("answer")
+                    if is_correct:
+                        st.success(f"Student Choice: **{student_ans}** (Correct ✅)")
+                    else:
+                        st.error(f"Student Choice: **{student_ans}** (Incorrect ❌) | Key: **{q_info.get('answer')}**")
+                else:
+                    st.info(f"**Student Answer:**\n\n>{student_ans if student_ans else '*No response provided*'}")
+                    st.markdown(f"**Model Key / Solution Guidelines:**\n`{q_info.get('answer')}`")
+                    
+                    col_m1, col_m2 = st.columns([1, 3])
+                    with col_m1:
+                        existing_mark = manual_marks.get(str(q_id), 0.0)
+                        manual_marks[str(q_id)] = st.number_input(
+                            f"Marks (Q#{q_id})", 
+                            min_value=0.0, 
+                            max_value=10.0, 
+                            value=float(existing_mark),
+                            step=0.5,
+                            key=f"mark_{sub['submission_id']}_{q_id}"
+                        )
+                    with col_m2:
+                        existing_remark = teacher_remarks.get(str(q_id), "")
+                        teacher_remarks[str(q_id)] = st.text_input(
+                            f"Faculty Remark (Q#{q_id})", 
+                            value=existing_remark,
+                            placeholder="e.g. Good derivation, check sign in step 2",
+                            key=f"remark_{sub['submission_id']}_{q_id}"
+                        )
+                st.markdown("---")
+                
+            eval_submitted = st.form_submit_button("💾 Save Evaluation & Grade", use_container_width=True)
+            
+            if eval_submitted:
+                submissions[selected_idx]["manual_marks"] = manual_marks
+                submissions[selected_idx]["teacher_remarks"] = teacher_remarks
+                submissions[selected_idx]["evaluated"] = True
+                
+                with open(SUBMISSIONS_FILE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(submissions, f, indent=4, ensure_ascii=False)
+                    
+                st.session_state["form_success"] = f"Successfully saved evaluation for {sub['student_name']} ({sub['submission_id']})!"
+                st.rerun()
