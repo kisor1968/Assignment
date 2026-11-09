@@ -8,7 +8,9 @@ from pdf2image import convert_from_bytes
 from PIL import Image
 import platform
 
-# Automatically configure path ONLY if running locally on Windows
+# --- CROSS-PLATFORM TESSERACT CONFIGURATION ---
+# Conditionally sets path ONLY when testing locally on Windows.
+# On Streamlit Cloud (Linux), it skips this and uses the system installation from packages.txt.
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -121,6 +123,7 @@ with tab_creator:
     st.markdown("### ✍️ Teacher Question Creator & OCR Importer")
     st.markdown("---")
 
+    # Persistent success message display across reruns
     if "form_success" in st.session_state:
         st.success(st.session_state["form_success"])
         del st.session_state["form_success"]
