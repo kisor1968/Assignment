@@ -368,7 +368,7 @@ tab_quiz, tab_creator, tab_eval = st.tabs([
 # =====================================================================
 with tab_quiz:
     render_hero(320)
-    st.title("🌉 Bridge Course Online Assessment Engine")
+    st.title("🌉 Online Assessment Engine")
     st.subheader("Department of Physics — Interactive Assessment")
     st.markdown("---")
 
