@@ -195,74 +195,72 @@ with tab_creator:
         st.success(st.session_state["form_success"])
         del st.session_state["form_success"]
 
-    # --- Section A: Flexible Question Creator Form ---
+    # --- Section A: Flexible Question Creator Form (Reactive Non-Form Layout) ---
     st.markdown("#### ➕ Add New Question")
     
-    # Placed outside the form so selection instantly updates the layout
     q_type_choice = st.selectbox(
         "Select Question Type", 
         ["Multiple Choice (MCQ)", "Short Answer Type", "Long Answer / Descriptive Type"],
         key="teacher_q_type"
     )
     
-    with st.form("add_flexible_question_form"):
-        new_q_text = st.text_area("Question Prompt", placeholder="Enter your question text or problem statement here...")
-        
-        valid_options = []
-        correct_ans = ""
-        
-        if q_type_choice == "Multiple Choice (MCQ)":
-            q_type_code = "mcq"
-            c1, c2 = st.columns(2)
-            with c1:
-                opt1 = st.text_input("Option A", placeholder="e.g. centimeter")
-                opt2 = st.text_input("Option B", placeholder="e.g. meter")
-            with c2:
-                opt3 = st.text_input("Option C", placeholder="e.g. kilogram")
-                opt4 = st.text_input("Option D", placeholder="e.g. dyne")
-                
-            valid_options = [o.strip() for o in [opt1, opt2, opt3, opt4] if o.strip()]
+    new_q_text = st.text_area("Question Prompt", placeholder="Enter your question text or problem statement here...", key="q_prompt_input")
+    
+    valid_options = []
+    correct_ans = ""
+    
+    if q_type_choice == "Multiple Choice (MCQ)":
+        q_type_code = "mcq"
+        c1, c2 = st.columns(2)
+        with c1:
+            opt1 = st.text_input("Option A", key="opt_a")
+            opt2 = st.text_input("Option B", key="opt_b")
+        with c2:
+            opt3 = st.text_input("Option C", key="opt_c")
+            opt4 = st.text_input("Option D", key="opt_d")
             
-            if valid_options:
-                correct_ans = st.selectbox("Select Correct Option", options=valid_options)
-            else:
-                st.selectbox("Select Correct Option", options=["Type options above first..."], disabled=True)
-                
-        elif q_type_choice == "Short Answer Type":
-            q_type_code = "short"
-            correct_ans = st.text_input("Model Answer / Key Words", placeholder="e.g., Energy / Force / Standard definition")
+        valid_options = [o.strip() for o in [opt1, opt2, opt3, opt4] if o.strip()]
+        
+        if valid_options:
+            correct_ans = st.selectbox("Select Correct Option", options=valid_options, key="correct_opt_select")
+        else:
+            st.info("💡 Type at least 2 options above to activate the correct answer selector.")
             
-        else: # Long Answer Type
-            q_type_code = "long"
-            correct_ans = st.text_area("Model Solution / Evaluation Guidelines", placeholder="Provide step-by-step solution or grading criteria...")
+    elif q_type_choice == "Short Answer Type":
+        q_type_code = "short"
+        correct_ans = st.text_input("Model Answer / Key Words", placeholder="e.g., Energy / Force / Standard definition", key="short_ans_input")
+        
+    else: # Long Answer Type
+        q_type_code = "long"
+        correct_ans = st.text_area("Model Solution / Evaluation Guidelines", placeholder="Provide step-by-step solution or grading criteria...", key="long_ans_input")
 
-        submitted = st.form_submit_button("💾 Save Question to Bank", use_container_width=True)
-        
-        if submitted:
-            if not new_q_text.strip():
-                st.error("Question prompt cannot be empty!")
-            elif q_type_code == "mcq" and len(valid_options) < 2:
-                st.error("Multiple-choice questions require at least 2 valid options.")
-            elif q_type_code == "mcq" and correct_ans == "Type options above first...":
-                st.error("Please select a valid correct answer option.")
-            else:
-                current_q = load_questions()
-                new_id = max([q.get("id", 0) for q in current_q], default=0) + 1
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if st.button("💾 Save Question to Bank", use_container_width=True, type="primary"):
+        if not new_q_text.strip():
+            st.error("Question prompt cannot be empty!")
+        elif q_type_code == "mcq" and len(valid_options) < 2:
+            st.error("Multiple-choice questions require at least 2 valid options.")
+        elif q_type_code == "mcq" and not correct_ans:
+            st.error("Please select a valid correct answer option.")
+        else:
+            current_q = load_questions()
+            new_id = max([q.get("id", 0) for q in current_q], default=0) + 1
+            
+            new_entry = {
+                "id": new_id,
+                "type": q_type_code,
+                "question": new_q_text.strip(),
+                "options": valid_options if q_type_code == "mcq" else [],
+                "answer": correct_ans.strip()
+            }
+            
+            current_q.append(new_entry)
+            with open(JSON_FILE_PATH, "w", encoding="utf-8") as f:
+                json.dump(current_q, f, indent=4, ensure_ascii=False)
                 
-                new_entry = {
-                    "id": new_id,
-                    "type": q_type_code,
-                    "question": new_q_text.strip(),
-                    "options": valid_options if q_type_code == "mcq" else [],
-                    "answer": correct_ans.strip()
-                }
-                
-                current_q.append(new_entry)
-                with open(JSON_FILE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(current_q, f, indent=4, ensure_ascii=False)
-                    
-                st.session_state["form_success"] = f"Successfully added [{q_type_code.upper()}] Question #{new_id}!"
-                st.rerun()
+            st.session_state["form_success"] = f"Successfully added [{q_type_code.upper()}] Question #{new_id}!"
+            st.rerun()
 
     st.markdown("---")
     
