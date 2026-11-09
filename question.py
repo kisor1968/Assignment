@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 from pathlib import Path
 import pypdf
@@ -19,6 +20,243 @@ st.set_page_config(
     page_icon="📝",
     layout="centered"
 )
+
+# =====================================================================
+# 🎨 DRAMATIC NEON THEME + 3D EFFECTS
+# =====================================================================
+NEON_CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Poppins:wght@300;400;600&display=swap');
+
+:root{
+  --c1:#ff2e97; --c2:#7b2ff7; --c3:#00e5ff; --c4:#ffd400; --c5:#00ff9d;
+}
+
+/* ---------- Animated gradient backdrop ---------- */
+.stApp{
+  background: linear-gradient(135deg,#0b0420,#1a0638,#05172e,#2a0845,#031c2e);
+  background-size: 400% 400%;
+  animation: bgShift 22s ease infinite;
+  font-family:'Poppins',sans-serif;
+}
+@keyframes bgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+[data-testid="stHeader"]{background:transparent;}
+.block-container{position:relative;z-index:2;padding-top:1.5rem;}
+
+/* ---------- Floating 3D cubes in background ---------- */
+.scene3d{position:fixed;inset:0;perspective:900px;z-index:0;pointer-events:none;overflow:hidden;}
+.cube{position:absolute;width:60px;height:60px;transform-style:preserve-3d;
+      animation:spin 14s linear infinite, floaty 9s ease-in-out infinite;}
+.cube div{position:absolute;width:60px;height:60px;border:2px solid;opacity:.55;
+          box-shadow:0 0 18px currentColor, inset 0 0 18px currentColor;}
+.cube div:nth-child(1){transform:translateZ(30px)}
+.cube div:nth-child(2){transform:rotateY(90deg) translateZ(30px)}
+.cube div:nth-child(3){transform:rotateY(180deg) translateZ(30px)}
+.cube div:nth-child(4){transform:rotateY(-90deg) translateZ(30px)}
+.cube div:nth-child(5){transform:rotateX(90deg) translateZ(30px)}
+.cube div:nth-child(6){transform:rotateX(-90deg) translateZ(30px)}
+.cube.a{left:6%;top:18%;color:var(--c1);animation-duration:12s,8s}
+.cube.b{left:88%;top:12%;color:var(--c3);animation-duration:17s,10s;transform:scale(1.5)}
+.cube.c{left:80%;top:68%;color:var(--c4);animation-duration:15s,7s}
+.cube.d{left:10%;top:72%;color:var(--c5);animation-duration:20s,11s;transform:scale(1.8)}
+.cube.e{left:50%;top:88%;color:var(--c2);animation-duration:13s,9s}
+.cube div{border-color:currentColor;}
+@keyframes spin{from{transform:rotateX(0) rotateY(0) rotateZ(0)}to{transform:rotateX(360deg) rotateY(720deg) rotateZ(360deg)}}
+@keyframes floaty{0%,100%{margin-top:0}50%{margin-top:-50px}}
+
+/* ---------- Typography ---------- */
+h1,h2,h3,h4,h5{font-family:'Orbitron',sans-serif !important;letter-spacing:.5px;}
+h1{
+  background:linear-gradient(90deg,var(--c1),var(--c4),var(--c3),var(--c1));
+  background-size:300% auto;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;animation:shine 6s linear infinite;
+  text-shadow:0 0 30px rgba(255,46,151,.35);
+}
+@keyframes shine{to{background-position:300% center}}
+h2,h3{color:var(--c3) !important;text-shadow:0 0 14px rgba(0,229,255,.55);}
+h4{color:#ffb3e1 !important;text-shadow:0 0 10px rgba(255,46,151,.5);}
+p,li,label,span,.stMarkdown,[data-testid="stWidgetLabel"] p,[data-testid="stCaptionContainer"]{color:#e9e4ff;}
+hr{border:none !important;height:2px !important;
+   background:linear-gradient(90deg,transparent,var(--c1),var(--c3),var(--c4),transparent) !important;
+   box-shadow:0 0 12px var(--c1);}
+
+/* ---------- Tabs ---------- */
+.stTabs [data-baseweb="tab-list"]{gap:10px;background:rgba(255,255,255,.04);padding:8px;border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(10px);}
+.stTabs [data-baseweb="tab"]{border-radius:12px;padding:10px 18px;color:#cfc4ff;
+  transition:all .3s;transform-style:preserve-3d;}
+.stTabs [data-baseweb="tab"]:hover{transform:translateY(-4px) rotateX(12deg);color:#fff;
+  background:rgba(123,47,247,.35);box-shadow:0 8px 20px rgba(123,47,247,.5);}
+.stTabs [aria-selected="true"]{background:linear-gradient(135deg,var(--c1),var(--c2)) !important;
+  color:#fff !important;box-shadow:0 0 22px rgba(255,46,151,.7);}
+.stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{display:none;}
+
+/* ---------- Inputs (glass) ---------- */
+.stTextInput input,.stTextArea textarea,.stNumberInput input,[data-baseweb="select"]>div{
+  background:rgba(255,255,255,.07) !important;color:#fff !important;
+  border:1px solid rgba(0,229,255,.35) !important;border-radius:12px !important;
+  backdrop-filter:blur(8px);transition:all .3s;}
+.stTextInput input:focus,.stTextArea textarea:focus,.stNumberInput input:focus{
+  border-color:var(--c1) !important;box-shadow:0 0 0 2px rgba(255,46,151,.45),0 0 25px rgba(255,46,151,.45) !important;
+  transform:translateY(-2px);}
+[data-baseweb="popover"] ul{background:#1a0638 !important;}
+[data-baseweb="popover"] li{color:#fff !important;}
+[data-testid="stFileUploader"] section{background:rgba(255,255,255,.05);border:2px dashed var(--c3);
+  border-radius:16px;transition:all .3s;}
+[data-testid="stFileUploader"] section:hover{border-color:var(--c1);box-shadow:0 0 25px rgba(255,46,151,.5);
+  transform:perspective(600px) rotateX(3deg) scale(1.01);}
+[data-testid="stFileUploader"] section *{color:#e9e4ff !important;}
+
+/* ---------- Radio options as 3D cards ---------- */
+.stRadio [role="radiogroup"] label{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:10px 16px;margin-bottom:8px;transition:all .25s;transform-style:preserve-3d;}
+.stRadio [role="radiogroup"] label:hover{transform:perspective(600px) translateZ(14px) rotateY(-4deg) translateX(6px);
+  background:linear-gradient(90deg,rgba(255,46,151,.3),rgba(0,229,255,.25));
+  box-shadow:0 10px 25px rgba(0,229,255,.35);border-color:var(--c3);}
+
+/* ---------- Buttons ---------- */
+.stButton>button,.stFormSubmitButton>button,.stDownloadButton>button{
+  background:linear-gradient(135deg,var(--c1),var(--c2),var(--c3));background-size:250% 250%;
+  color:#fff !important;font-weight:600;border:none;border-radius:14px;padding:.7rem 1rem;
+  box-shadow:0 8px 0 #4a1a8f,0 14px 30px rgba(123,47,247,.55);
+  transition:all .25s;animation:btnflow 5s ease infinite;}
+@keyframes btnflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.stButton>button:hover,.stFormSubmitButton>button:hover,.stDownloadButton>button:hover{
+  transform:translateY(-4px) scale(1.02);box-shadow:0 12px 0 #4a1a8f,0 22px 40px rgba(255,46,151,.6);color:#fff !important;}
+.stButton>button:active,.stFormSubmitButton>button:active{transform:translateY(6px);box-shadow:0 2px 0 #4a1a8f,0 4px 12px rgba(0,0,0,.5);}
+.stButton>button[kind="primary"]{background:linear-gradient(135deg,var(--c4),var(--c1),var(--c2));
+  box-shadow:0 8px 0 #8a1450,0 14px 34px rgba(255,46,151,.65);animation:btnflow 4s ease infinite, pulse 2.2s infinite;}
+@keyframes pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+
+/* ---------- Metrics as tilted 3D cards ---------- */
+[data-testid="stMetric"]{background:linear-gradient(145deg,rgba(123,47,247,.35),rgba(0,229,255,.18));
+  border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:16px 18px;
+  transform:perspective(800px) rotateX(6deg) rotateY(-6deg);transition:all .4s;
+  box-shadow:0 18px 35px rgba(0,0,0,.5),0 0 25px rgba(123,47,247,.45);}
+[data-testid="stMetric"]:hover{transform:perspective(800px) rotateX(0) rotateY(0) translateY(-8px) scale(1.04);
+  box-shadow:0 26px 45px rgba(0,0,0,.55),0 0 40px rgba(0,229,255,.7);}
+[data-testid="stMetricValue"]{color:var(--c4) !important;text-shadow:0 0 14px rgba(255,212,0,.7);
+  font-family:'Orbitron',sans-serif;}
+[data-testid="stMetricLabel"] *{color:#bfe9ff !important;}
+
+/* ---------- Alerts ---------- */
+[data-testid="stAlert"]{border-radius:16px;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.2);
+  animation:slideIn .6s ease both;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-40px) rotateY(25deg)}to{opacity:1;transform:none}}
+[data-testid="stAlert"] *{color:#fff !important;}
+
+/* ---------- Forms & expanders ---------- */
+[data-testid="stForm"]{background:rgba(255,255,255,.04);border:1px solid rgba(255,46,151,.4);
+  border-radius:20px;box-shadow:0 0 30px rgba(255,46,151,.25);}
+</style>
+
+<div class="scene3d">
+  <div class="cube a"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="cube b"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="cube c"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="cube d"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="cube e"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+</div>
+"""
+st.markdown(NEON_CSS, unsafe_allow_html=True)
+
+# --- Three.js interactive 3D hero banner (rotating knot + particles + mouse parallax) ---
+THREE_HERO = """
+<div id="wrap" style="width:100%;height:100%;position:relative;font-family:sans-serif;">
+  <canvas id="c" style="width:100%;height:100%;display:block;"></canvas>
+  <div style="position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;
+       font-size:13px;letter-spacing:4px;text-shadow:0 0 12px #00e5ff;">
+       MOVE YOUR MOUSE · EXPLORE THE BRIDGE
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(55,2,0.1,100);camera.position.z=7;
+
+const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(1.3,0.4,180,24),
+  new THREE.MeshStandardMaterial({color:0xff2e97,metalness:.7,roughness:.2,emissive:0x330022}));
+scene.add(knot);
+const wire=new THREE.Mesh(new THREE.IcosahedronGeometry(2.6,1),
+  new THREE.MeshBasicMaterial({color:0x00e5ff,wireframe:true,transparent:true,opacity:.35}));
+scene.add(wire);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(3.4,0.03,16,120),
+  new THREE.MeshBasicMaterial({color:0xffd400}));
+ring.rotation.x=Math.PI/2.4;scene.add(ring);
+const ring2=ring.clone();ring2.material=new THREE.MeshBasicMaterial({color:0x7b2ff7});
+ring2.rotation.x=-Math.PI/3;ring2.rotation.y=.6;scene.add(ring2);
+
+// orbiting colourful spheres
+const orbs=[];const cols=[0x00ff9d,0xffd400,0x00e5ff,0xff2e97,0x7b2ff7];
+cols.forEach((c,i)=>{
+  const m=new THREE.Mesh(new THREE.SphereGeometry(.22,24,24),
+    new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.6}));
+  m.userData={r:3+i*.25,s:.6+i*.15,o:i*1.3};scene.add(m);orbs.push(m);
+});
+
+// particles
+const N=900,pos=new Float32Array(N*3),col=new Float32Array(N*3);
+for(let i=0;i<N;i++){
+  pos[i*3]=(Math.random()-.5)*26;pos[i*3+1]=(Math.random()-.5)*14;pos[i*3+2]=(Math.random()-.5)*14;
+  const k=new THREE.Color().setHSL(Math.random(),1,.6);col.set([k.r,k.g,k.b],i*3);
+}
+const g=new THREE.BufferGeometry();
+g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+g.setAttribute('color',new THREE.BufferAttribute(col,3));
+const pts=new THREE.Points(g,new THREE.PointsMaterial({size:.07,vertexColors:true}));
+scene.add(pts);
+
+scene.add(new THREE.AmbientLight(0xffffff,.5));
+const l1=new THREE.PointLight(0x00e5ff,2,30);l1.position.set(5,4,5);scene.add(l1);
+const l2=new THREE.PointLight(0xff2e97,2,30);l2.position.set(-5,-3,4);scene.add(l2);
+
+let mx=0,my=0;
+window.addEventListener('mousemove',e=>{mx=(e.clientX/innerWidth-.5)*2;my=(e.clientY/innerHeight-.5)*2;});
+function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;renderer.setSize(w,h,false);
+  camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resize);resize();
+
+const clock=new THREE.Clock();
+(function loop(){
+  const t=clock.getElapsedTime();
+  knot.rotation.x=t*.5+my*.6;knot.rotation.y=t*.7+mx*.8;
+  const s=1+Math.sin(t*2)*.05;knot.scale.set(s,s,s);
+  wire.rotation.y=-t*.25;wire.rotation.x=t*.15;
+  ring.rotation.z=t*.6;ring2.rotation.z=-t*.4;
+  orbs.forEach(o=>{const d=o.userData;o.position.set(Math.cos(t*d.s+d.o)*d.r,Math.sin(t*d.s*1.3+d.o)*1.6,Math.sin(t*d.s+d.o)*d.r);});
+  pts.rotation.y=t*.03;
+  camera.position.x+=(mx*1.5-camera.position.x)*.05;
+  camera.position.y+=(-my*1-camera.position.y)*.05;camera.lookAt(0,0,0);
+  l1.color.setHSL((t*.05)%1,1,.6);
+  renderer.render(scene,camera);requestAnimationFrame(loop);
+})();
+</script>
+"""
+
+def render_hero(height=320):
+    components.html(
+        "<style>html,body{margin:0;height:100%;background:transparent;overflow:hidden}</style>" + THREE_HERO,
+        height=height,
+    )
+
+def banner(title, subtitle=""):
+    st.markdown(
+        f"""
+        <div style="padding:18px 22px;border-radius:20px;margin-bottom:10px;
+             background:linear-gradient(120deg,rgba(255,46,151,.35),rgba(123,47,247,.35),rgba(0,229,255,.3));
+             border:1px solid rgba(255,255,255,.25);box-shadow:0 14px 40px rgba(123,47,247,.45);
+             transform:perspective(900px) rotateX(4deg);">
+          <div style="font-family:Orbitron,sans-serif;font-size:1.5rem;font-weight:800;color:#fff;
+               text-shadow:0 0 18px #ff2e97;">{title}</div>
+          <div style="color:#d6f6ff;margin-top:4px;">{subtitle}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # --- ABSOLUTE PATH SETUP ---
 BASE_DIR = Path(__file__).resolve().parent
@@ -86,6 +324,7 @@ tab_quiz, tab_creator, tab_eval = st.tabs([
 # TAB 1: TAKE ASSESSMENT (Supports Live Answer Modification & File Uploads)
 # =====================================================================
 with tab_quiz:
+    render_hero(320)
     st.title("🌉 Bridge Course Online Assessment Engine")
     st.subheader("Department of Physics — Interactive Assessment")
     st.markdown("---")
@@ -200,6 +439,9 @@ with tab_quiz:
             percentage = int((score / total_mcq) * 100) if total_mcq > 0 else 0
             
             st.success(f"🎉 Assessment Submitted Successfully! Reference ID: **{st.session_state['last_sub_id']}**")
+            if st.session_state.get("celebrated") != st.session_state["last_sub_id"]:
+                st.balloons()
+                st.session_state["celebrated"] = st.session_state["last_sub_id"]
             st.markdown("## 📊 Submission Summary")
             
             if total_mcq > 0:
@@ -220,7 +462,7 @@ with tab_quiz:
 # TAB 2: TEACHER QUESTION CREATOR, OCR & QUESTION MANAGER (Edit/Remove)
 # =====================================================================
 with tab_creator:
-    st.markdown("### ✍️ Teacher Question Creator, Importer & Manager")
+    banner("✍️ Question Creator Studio", "Create, import, edit and manage your question bank")
     st.markdown("---")
 
     if "form_success" in st.session_state:
@@ -372,7 +614,7 @@ with tab_creator:
 # TAB 3: TEACHER EVALUATION & GRADING DASHBOARD (Views Student Uploads)
 # =====================================================================
 with tab_eval:
-    st.markdown("### 👨‍🏫 Subjective Answer Evaluation & Grading Dashboard")
+    banner("👨‍🏫 Evaluation & Grading Command Center", "Review submissions, inspect uploads and award marks")
     st.caption("Review student submissions, inspect uploaded work files, assign manual marks, and record feedback.")
     st.markdown("---")
 
