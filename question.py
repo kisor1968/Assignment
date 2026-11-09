@@ -118,6 +118,23 @@ hr{border:none !important;height:2px !important;
 [data-testid="stFileUploader"] section:hover{border-color:var(--c1);box-shadow:0 0 25px rgba(255,46,151,.5);
   transform:perspective(600px) rotateX(3deg) scale(1.01);}
 [data-testid="stFileUploader"] section *{color:#e9e4ff !important;}
+/* Upload / Browse button inside the uploader */
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploaderDropzone"] button{
+  background:linear-gradient(135deg,#ff2e97,#7b2ff7) !important;
+  border:none !important;border-radius:12px !important;
+  box-shadow:0 5px 0 #4a1a8f,0 8px 20px rgba(123,47,247,.5) !important;transition:all .25s;}
+[data-testid="stFileUploader"] button *,
+[data-testid="stFileUploaderDropzone"] button *{color:#ffffff !important;fill:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;font-weight:600;}
+[data-testid="stFileUploader"] button:hover,
+[data-testid="stFileUploaderDropzone"] button:hover{
+  transform:translateY(-3px);box-shadow:0 8px 0 #4a1a8f,0 14px 26px rgba(255,46,151,.6) !important;}
+/* uploaded file name rows + delete (x) button */
+[data-testid="stFileUploaderFile"],[data-testid="stFileChip"]{
+  background:rgba(27,10,61,.9) !important;border-radius:12px;border:1px solid rgba(0,229,255,.4);}
+[data-testid="stFileUploaderFile"] *,[data-testid="stFileChip"] *{color:#ffffff !important;}
+[data-testid="stFileUploaderDeleteBtn"] button{background:transparent !important;box-shadow:none !important;}
 
 /* ---------- Radio options as 3D cards ---------- */
 .stRadio [role="radiogroup"] label{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);
