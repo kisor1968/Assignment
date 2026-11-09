@@ -431,7 +431,7 @@ with tab_eval:
                     # Display uploaded file link if available
                     if str(q_id) in student_uploads:
                         file_path = student_uploads[str(q_id)]
-                        st.warning(📁 **Handwritten File Uploaded:** ` {Path(file_path).name} `")
+                        st.warning(f"Handwritten File Uploaded: {Path(file_path).name}")
                         if Path(file_path).exists():
                             with open(file_path, "rb") as fp:
                                 st.download_button(
