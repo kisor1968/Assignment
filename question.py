@@ -9,6 +9,8 @@ from PIL import Image
 import platform
 
 # --- CROSS-PLATFORM TESSERACT CONFIGURATION ---
+# Conditionally sets path ONLY when testing locally on Windows.
+# On Streamlit Cloud (Linux), it skips this and uses the system installation from packages.txt.
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -23,7 +25,7 @@ st.set_page_config(
 BASE_DIR = Path(__file__).resolve().parent
 JSON_FILE_PATH = BASE_DIR / "question.json"
 
-# Hybrid starter questions demonstration
+# Hybrid starter questions demonstration (supporting MCQ, short, and long types)
 DEFAULT_QUESTIONS = [
     {
         "id": 1,
@@ -188,6 +190,7 @@ with tab_creator:
     st.markdown("### ✍️ Teacher Question Creator & Flexible Importer")
     st.markdown("---")
 
+    # Persistent success message display across reruns
     if "form_success" in st.session_state:
         st.success(st.session_state["form_success"])
         del st.session_state["form_success"]
@@ -195,10 +198,11 @@ with tab_creator:
     # --- Section A: Flexible Question Creator Form ---
     st.markdown("#### ➕ Add New Question")
     
-    # Select question type outside form to dynamically render inputs
+    # Placed outside the form so selection instantly updates the layout
     q_type_choice = st.selectbox(
         "Select Question Type", 
-        ["Multiple Choice (MCQ)", "Short Answer Type", "Long Answer / Descriptive Type"]
+        ["Multiple Choice (MCQ)", "Short Answer Type", "Long Answer / Descriptive Type"],
+        key="teacher_q_type"
     )
     
     with st.form("add_flexible_question_form"):
@@ -211,28 +215,36 @@ with tab_creator:
             q_type_code = "mcq"
             c1, c2 = st.columns(2)
             with c1:
-                opt1 = st.text_input("Option A")
-                opt2 = st.text_input("Option B")
+                opt1 = st.text_input("Option A", placeholder="e.g. centimeter")
+                opt2 = st.text_input("Option B", placeholder="e.g. meter")
             with c2:
-                opt3 = st.text_input("Option C")
-                opt4 = st.text_input("Option D")
+                opt3 = st.text_input("Option C", placeholder="e.g. kilogram")
+                opt4 = st.text_input("Option D", placeholder="e.g. dyne")
                 
             valid_options = [o.strip() for o in [opt1, opt2, opt3, opt4] if o.strip()]
-            correct_ans = st.selectbox("Select Correct Option", options=valid_options if valid_options else ["Provide options above"])
-        
+            
+            if valid_options:
+                correct_ans = st.selectbox("Select Correct Option", options=valid_options)
+            else:
+                st.selectbox("Select Correct Option", options=["Type options above first..."], disabled=True)
+                
         elif q_type_choice == "Short Answer Type":
             q_type_code = "short"
             correct_ans = st.text_input("Model Answer / Key Words", placeholder="e.g., Energy / Force / Standard definition")
             
         else: # Long Answer Type
             q_type_code = "long"
-            correct_ans = st.text_area("Model Solution / Evaluation Guidelines", placeholder="Provide the step-by-step solution, formula derivation, or key grading criteria...")
+            correct_ans = st.text_area("Model Solution / Evaluation Guidelines", placeholder="Provide step-by-step solution or grading criteria...")
 
-        if st.form_submit_button("💾 Save Question to Bank", use_container_width=True):
+        submitted = st.form_submit_button("💾 Save Question to Bank", use_container_width=True)
+        
+        if submitted:
             if not new_q_text.strip():
                 st.error("Question prompt cannot be empty!")
             elif q_type_code == "mcq" and len(valid_options) < 2:
                 st.error("Multiple-choice questions require at least 2 valid options.")
+            elif q_type_code == "mcq" and correct_ans == "Type options above first...":
+                st.error("Please select a valid correct answer option.")
             else:
                 current_q = load_questions()
                 new_id = max([q.get("id", 0) for q in current_q], default=0) + 1
@@ -294,7 +306,6 @@ with tab_creator:
                             
                             if lines:
                                 q_text = re.sub(r'^\d+[\.\)]\s*', '', lines[0])
-                                # Detect if sub-lines match option patterns like (a), (b) or A), B)
                                 potential_opts = [l for l in lines[1:] if re.match(r'^\(?[A-Da-d]\)[\.\s]', l)]
                                 
                                 if len(potential_opts) >= 2:
@@ -302,7 +313,6 @@ with tab_creator:
                                     opts = [re.sub(r'^\(?[A-Da-d]\)[\.\s]*', '', o) for o in potential_opts]
                                     ans = opts[0]
                                 else:
-                                    # If no clean MCQ options are found, import as a subjective long/short question
                                     q_type = "long" if len(lines) > 2 else "short"
                                     opts = []
                                     ans = "\n".join(lines[1:]) if len(lines) > 1 else "Refer to textbook/notes."
