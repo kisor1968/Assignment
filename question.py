@@ -92,8 +92,20 @@ hr{border:none !important;height:2px !important;
 .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{display:none;}
 
 /* ---------- Inputs (glass) ---------- */
+/* wrappers must be dark too, otherwise white text sits on a white box */
+[data-baseweb="input"],[data-baseweb="base-input"],[data-baseweb="textarea"],
+.stTextInput>div>div,.stTextArea>div>div,.stNumberInput>div>div{
+  background:#1b0a3d !important;border-radius:12px !important;}
+.stTextInput input,.stTextArea textarea,.stNumberInput input,
+[data-baseweb="input"] input,[data-baseweb="textarea"] textarea,[data-baseweb="base-input"] input,
+[data-baseweb="select"] *{
+  background:#1b0a3d !important;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;
+  caret-color:#00e5ff !important;}
+.stTextInput input::placeholder,.stTextArea textarea::placeholder,.stNumberInput input::placeholder{
+  color:#9d8fd1 !important;-webkit-text-fill-color:#9d8fd1 !important;opacity:1 !important;}
+.stNumberInput button{background:#2a1260 !important;color:#fff !important;}
 .stTextInput input,.stTextArea textarea,.stNumberInput input,[data-baseweb="select"]>div{
-  background:rgba(255,255,255,.07) !important;color:#fff !important;
+  background:#1b0a3d !important;color:#fff !important;
   border:1px solid rgba(0,229,255,.35) !important;border-radius:12px !important;
   backdrop-filter:blur(8px);transition:all .3s;}
 .stTextInput input:focus,.stTextArea textarea:focus,.stNumberInput input:focus{
