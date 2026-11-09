@@ -6,14 +6,12 @@ import re
 import pytesseract
 from pdf2image import convert_from_bytes
 from PIL import Image
-import pytesseract
 import platform
 
 # Automatically configure path ONLY if running locally on Windows
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-# Explicitly set the path to tesseract.exe on Windows
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Bridge Course Online Assessment Engine",
