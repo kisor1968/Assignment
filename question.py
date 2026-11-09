@@ -16,7 +16,7 @@ if platform.system() == "Windows":
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Bridge Course Assessment & Grading Engine",
+    page_title="Course Assessment & Grading Engine",
     page_icon="📝",
     layout="centered"
 )
