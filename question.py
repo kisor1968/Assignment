@@ -156,6 +156,20 @@ hr{border:none !important;height:2px !important;
   animation:slideIn .6s ease both;}
 @keyframes slideIn{from{opacity:0;transform:translateX(-40px) rotateY(25deg)}to{opacity:1;transform:none}}
 [data-testid="stAlert"] *{color:#fff !important;}
+/* dark tinted alert boxes so white text is readable */
+[data-testid="stAlert"],[data-testid="stAlert"]>div,[data-testid="stAlert"] [data-baseweb="notification"]{
+  background:rgba(27,10,61,.92) !important;border:1px solid rgba(0,229,255,.55) !important;
+  border-left:6px solid #00e5ff !important;box-shadow:0 0 20px rgba(0,229,255,.3);}
+[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]),
+[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"])>div{
+  background:rgba(0,70,45,.9) !important;border-color:#00ff9d !important;box-shadow:0 0 20px rgba(0,255,157,.35);}
+[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]),
+[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"])>div{
+  background:rgba(90,65,0,.9) !important;border-color:#ffd400 !important;box-shadow:0 0 20px rgba(255,212,0,.35);}
+[data-testid="stAlert"]:has([data-testid="stAlertContentError"]),
+[data-testid="stAlert"]:has([data-testid="stAlertContentError"])>div{
+  background:rgba(95,10,45,.92) !important;border-color:#ff2e97 !important;box-shadow:0 0 20px rgba(255,46,151,.4);}
+[data-testid="stAlert"] ::selection{background:#ff2e97;color:#fff;}
 
 /* ---------- Forms & expanders ---------- */
 [data-testid="stForm"]{background:rgba(255,255,255,.04);border:1px solid rgba(255,46,151,.4);
