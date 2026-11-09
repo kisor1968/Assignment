@@ -1,0 +1,68 @@
+[
+    {
+        "id": 1,
+        "question": "What is the SI unit of electric charge?",
+        "options": [
+            "Ampere",
+            "Coulomb",
+            "Volt",
+            "Ohm"
+        ],
+        "answer": "Coulomb"
+    },
+    {
+        "id": 2,
+        "question": "Which of the following physical quantities is a scalar?",
+        "options": [
+            "Velocity",
+            "Force",
+            "Work",
+            "Acceleration"
+        ],
+        "answer": "Work"
+    },
+    {
+        "id": 3,
+        "question": "What is the dimensional formula for Work Done ($W = F \\times d$)?",
+        "options": [
+            "[M L T⁻¹]",
+            "[M L² T⁻²]",
+            "[M L⁻¹ T⁻²]",
+            "[M² L T⁻²]"
+        ],
+        "answer": "[M L² T⁻²]"
+    },
+    {
+        "id": 4,
+        "question": "According to Newton's Second Law of Motion, force is proportional to:",
+        "options": [
+            "Rate of change of momentum",
+            "Rate of change of velocity",
+            "Mass times displacement",
+            "Velocity times time"
+        ],
+        "answer": "Rate of change of momentum"
+    },
+    {
+        "id": 5,
+        "question": "What is the acceleration due to gravity on Earth?",
+        "options": [
+            "9.8 m/s²",
+            "8.9 m/s²",
+            "10.5 m/s²",
+            "9.1 m/s²"
+        ],
+        "answer": "9.8 m/s²"
+    },
+    {
+        "id": 6,
+        "question": "What is the unit of current?",
+        "options": [
+            "Columb",
+            "dyne",
+            "Ampere",
+            "faraday"
+        ],
+        "answer": "Columb"
+    }
+]
