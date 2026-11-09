@@ -10,6 +10,8 @@ import platform
 from datetime import datetime
 
 # --- CROSS-PLATFORM TESSERACT CONFIGURATION ---
+# Conditionally sets path ONLY when testing locally on Windows.
+# On Streamlit Cloud (Linux), it skips this and uses the system installation from packages.txt.
 if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -301,13 +303,13 @@ with tab_creator:
 
     st.markdown("---")
     st.markdown("#### 📄 Smart PDF / Scanned Image Importer")
-    st.caption("Upload question papers (`.pdf`, `.png`, `.jpg`). The system automatically detects whether questions are MCQs or subjective tasks.")
+    st.caption("Upload question papers (`.pdf`, `.png`, `.jpg`). The system captures structured assignment blocks cleanly without duplication.")
     
     uploaded_file = st.file_uploader("Upload Question Paper", type=["pdf", "png", "jpg", "jpeg"])
     
     if uploaded_file is not None:
         if st.button("🚀 Process & Import Questions", use_container_width=True):
-            with st.spinner("Extracting and analyzing text..."):
+            with st.spinner("Extracting and structuring assignment text..."):
                 try:
                     full_text = ""
                     file_bytes = uploaded_file.read()
@@ -329,43 +331,32 @@ with tab_creator:
                     if not full_text.strip():
                         st.error("OCR could not extract readable text from this file.")
                     else:
-                        raw_questions = re.split(r'\n\s*(?=\d+[\.\)]\s)', full_text)
+                        raw_questions = re.split(r'\n\s*(?=\d+\.\s)', full_text)
                         current_q_bank = load_questions()
                         added_count = 0
                         
                         for rq in raw_questions:
-                            if not rq.strip(): continue
-                            lines = [l.strip() for l in rq.split('\n') if l.strip()]
+                            clean_block = rq.strip()
+                            if not clean_block:
+                                continue
                             
-                            if lines:
-                                q_text = re.sub(r'^\d+[\.\)]\s*', '', lines[0])
-                                potential_opts = [l for l in lines[1:] if re.match(r'^\(?[A-Da-d]\)[\.\s]', l)]
-                                
-                                if len(potential_opts) >= 2:
-                                    q_type = "mcq"
-                                    opts = [re.sub(r'^\(?[A-Da-d]\)[\.\s]*', '', o) for o in potential_opts]
-                                    ans = opts[0]
-                                else:
-                                    q_type = "long" if len(lines) > 2 else "short"
-                                    opts = []
-                                    ans = "\n".join(lines[1:]) if len(lines) > 1 else "Refer to textbook/notes."
-                                    if len(lines) > 1:
-                                        q_text += "\n" + "\n".join(lines[1:])
-                                
-                                new_id = max([q.get("id", 0) for q in current_q_bank], default=0) + 1
-                                current_q_bank.append({
-                                    "id": new_id,
-                                    "type": q_type,
-                                    "question": q_text,
-                                    "options": opts,
-                                    "answer": ans
-                                })
-                                added_count += 1
+                            q_text = clean_block
+                            model_guideline = "Verify output values, algorithm logic, and syntax accuracy."
+                            
+                            new_id = max([q.get("id", 0) for q in current_q_bank], default=0) + 1
+                            current_q_bank.append({
+                                "id": new_id,
+                                "type": "long",
+                                "question": q_text,
+                                "options": [],
+                                "answer": model_guideline
+                            })
+                            added_count += 1
                         
                         with open(JSON_FILE_PATH, "w", encoding="utf-8") as f:
                             json.dump(current_q_bank, f, indent=4, ensure_ascii=False)
                         
-                        st.session_state["form_success"] = f"Successfully imported {added_count} hybrid questions!"
+                        st.session_state["form_success"] = f"Successfully imported {added_count} assignment questions cleanly!"
                         st.rerun()
                 except Exception as e:
                     st.error(f"Import Error: {e}")
@@ -395,7 +386,6 @@ with tab_eval:
     if not submissions:
         st.info("No student submissions logged yet.")
     else:
-        # Build submission selector options
         sub_options = {
             f"{s['submission_id']} — {s['student_name']} ({s['timestamp']}) [{'EVALUATED ✅' if s.get('evaluated') else 'PENDING ⏳'}]": idx
             for idx, s in enumerate(submissions)
