@@ -63,7 +63,7 @@ with tab_quiz:
     questions = load_questions()
 
     if not questions:
-        st.warning("No questions found in the question bank yet!")
+        st.warning("No questions found in the question bank yet! Switch to the **Teacher Question Creator** tab to add or import questions.")
     else:
         if "submitted" not in st.session_state:
             st.session_state["submitted"] = False
@@ -218,3 +218,15 @@ with tab_creator:
                         st.rerun()
                 except Exception as e:
                     st.error(f"OCR Processing Error: {e}")
+
+    # --- QUESTION BANK MANAGEMENT / RESET SECTION ---
+    st.markdown("---")
+    st.markdown("#### ⚙️ Question Bank Management")
+    st.caption("Clear existing records if you want to wipe the question bank and start a fresh question set from scratch.")
+    
+    if st.button("🗑️ Clear & Reset Entire Question Bank", type="secondary", use_container_width=True):
+        empty_bank = []
+        with open(JSON_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(empty_bank, f, indent=4, ensure_ascii=False)
+        st.session_state["form_success"] = "Question bank has been completely cleared and reset!"
+        st.rerun()
