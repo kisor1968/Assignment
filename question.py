@@ -381,6 +381,39 @@ def ensure_admin_bootstrap():
           f"  (shown only once - you must change it at first login)\n{bar}\n", flush=True)
 
 
+def apply_admin_reset_secret():
+    """Recovery: if ADMIN_RESET_PASSWORD is set in Streamlit Secrets, make it the admin password.
+
+    The admin must change it at next login. It is applied once per secret value (so changing the
+    password later is not overwritten); put a different value in Secrets to reset again.
+    """
+    if st.session_state.get("_admin_reset_checked"):
+        return
+    st.session_state["_admin_reset_checked"] = True
+    try:
+        pw = st.secrets.get("ADMIN_RESET_PASSWORD")
+    except Exception:  # no secrets configured
+        return
+    if not pw:
+        return
+    pw = str(pw)
+    data = _load()
+    done = data.get("admin_reset_marker")
+    if done and verify_secret(pw, done):
+        return
+    if password_problem(pw):
+        st.error("ADMIN_RESET_PASSWORD in Secrets is too weak: " + password_problem(pw))
+        return
+    rec = hash_secret(pw)
+    rec["must_change"] = True
+    data["admin"] = rec
+    data["admin_reset_marker"] = hash_secret(pw)
+    write_json(_ACCOUNTS, data)
+    locks = read_json(_LOCKS, {})
+    write_json(_LOCKS, {k: v for k, v in locks.items() if not k.startswith("login:*:")})
+    audit("admin_password_reset", "system", "via Streamlit Secrets")
+
+
 def list_teachers(dept):
     return sorted(_load()["teachers"].get(slugify(dept), {}).keys())
 
@@ -1935,6 +1968,7 @@ def render_analytics(store, user):
 # APP — Departmental Assessment & Grading Portal - entry point.   Run:  streamlit run app.py
 # ======================================================================
 apply_theme()
+apply_admin_reset_secret()
 ensure_admin_bootstrap()
 
 # ---------------------------------------------------------------- session & role
