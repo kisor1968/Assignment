@@ -1,4 +1,6 @@
-streamlit
+streamlit>1.36
+pandas
+reportlab
 pypdf
 pytesseract
 pdf2image
